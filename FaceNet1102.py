@@ -10,11 +10,11 @@ import cv2
 import matplotlib.pyplot as plt
 import os
 import numpy as np
-
-
+from sklearn.preprocessing import Normalizer
 
 
 embedder = FaceNet()
+l2_normalizer = Normalizer('l2')
 
 
 def read_image(path):
@@ -63,7 +63,13 @@ ahmed_img = read_image('E:/Software/Experiments/known/Ahmed1/Ahmed1.jpg')
 abdallah_img = read_image('E:/Software/Experiments/known/Abdallah/Abdallah.jpg')
 dodo_img = read_image('E:/Software/Experiments/known/Dodo/Dodo.jpg')    
 malek_img = read_image('E:/Software/Experiments/known/Malek/Malek.jpg')
-rammah_img = read_image('E:/Software/Experiments/known/Rammah3/Rammah3.jpg')
+rammah_img1 =read_image('E:/Software/Experiments/known/Rammah1/Rammah1.jpg')
+rammah_img2 = read_image('E:/Software/Experiments/known/Rammah2/Rammah2.jpg')
+rammah_img3 = read_image('E:/Software/Experiments/known/Rammah3/Rammah3.jpg')
+rammah_img5 = read_image('E:/Software/Experiments/known/Rammah5/Rammah5.jpg')
+rammah_img6 = read_image('E:/Software/Experiments/known/Rammah6/Rammah6.jpg')
+rammah_img7 = read_image('E:/Software/Experiments/known/Rammah7/Rammah7.jpg')
+rammah_img8 = read_image('E:/Software/Experiments/known/Rammah8/Rammah8.jpg')
 sayed_img = read_image('E:/Software/Experiments/known/Sayed/Sayed.jpg')
 
 
@@ -71,8 +77,48 @@ add_person(ahmed_img, 'Ahmed')
 add_person(abdallah_img, 'Abdallah')
 add_person(dodo_img, 'Dodo')
 add_person(malek_img, 'Malek')
-add_person(rammah_img, 'Rammah')
 add_person(sayed_img, 'Sayed')
+
+
+# Multiple images for a single person experiment
+
+# add_person(rammah_img1, 'Rammah1')
+# add_person(rammah_img2, 'Rammah2')
+# add_person(rammah_img3, 'Rammah3')
+
+
+# rammah_img1 = cv2.resize(rammah_img1, (160, 160))
+# rammah_img2 = cv2.resize(rammah_img2, (160, 160))
+# rammah_img3 = cv2.resize(rammah_img3, (160, 160))
+
+
+rammah1_encode = detect(rammah_img1)
+rammah1_encode = rammah1_encode[0]['embedding']
+
+rammah2_encode = detect(rammah_img2)
+rammah2_encode = rammah2_encode[0]['embedding']
+
+rammah3_encode = detect(rammah_img3)
+rammah3_encode = rammah3_encode[0]['embedding']
+
+rammah5_encode = detect(rammah_img5)
+rammah5_encode = rammah5_encode[0]['embedding']
+
+rammah6_encode = detect(rammah_img6)
+rammah6_encode = rammah6_encode[0]['embedding']
+
+rammah7_encode = detect(rammah_img7)
+rammah7_encode = rammah7_encode[0]['embedding']
+
+rammah8_encode = detect(rammah_img8)
+rammah8_encode = rammah8_encode[0]['embedding']
+
+rammah_encode_list = [rammah1_encode, rammah2_encode, rammah3_encode, rammah5_encode, rammah6_encode, rammah7_encode, rammah8_encode]
+rammah_encode = np.sum(rammah_encode_list, axis=0)
+rammah_encode = l2_normalizer.transform(np.expand_dims(rammah_encode, axis=0))[0]
+database['Rammah'] = rammah_encode
+
+
 
 # path = 'E:/Software/Experiments/IMG-20191208-WA0004.jpg'
 # image = read_image(path)
@@ -86,19 +132,25 @@ add_person(sayed_img, 'Sayed')
 
 counter = 0
 
-for person_directory in os.listdir('E:/Software/Experiments/test_0/'):
-    person_dir = os.path.join('E:/Software/Experiments/test_0/', person_directory)
+for person_directory in os.listdir('E:/Software/Experiments/test/'):
+    person_dir = os.path.join('E:/Software/Experiments/test/', person_directory)
     for image_name in os.listdir(person_dir):
         image_path = os.path.join(person_dir, image_name)
     image = read_image(image_path)
     image_copy = image.copy()
     image_copy = cv2.cvtColor(image_copy, cv2.COLOR_BGR2RGB)
+    
+    # resizing experiment
+    # image_copy = cv2.resize(image_copy, (2000, 1800))
+    
     detections = detect(image_copy)
+    
+   
 
     for res in detections:
         
         pt1, pt2 = get_points(res['box'])
-        
+         
         min_distance = 100
         identity = "unknown"
         for person in database:
@@ -106,6 +158,7 @@ for person_directory in os.listdir('E:/Software/Experiments/test_0/'):
             embedding1 = database[person]
             embedding2 = res['embedding']
             distance = embedder.compute_distance(embedding1, embedding2)
+            distance = np.round(distance, decimals=1)
             
             if distance < min_distance:
                 min_distance = distance
@@ -113,9 +166,9 @@ for person_directory in os.listdir('E:/Software/Experiments/test_0/'):
                 
                 
         
-        if min_distance < 0.5:
+        if min_distance <= 0.3:
             cv2.rectangle(image_copy, pt1, pt2, (0, 200, 200), 3)
-            cv2.putText(image_copy, identity + f'_{min_distance:.2f}', (pt1[0], pt1[1] - 5), cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 0, 0), 2)
+            cv2.putText(image_copy, identity + f'_{min_distance:.1f}', (pt1[0], pt1[1] - 5), cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 0, 0), 2)
         else:
             cv2.rectangle(image_copy, pt1, pt2, (0, 0, 255), 3)
             cv2.putText(image_copy, 'unknown', pt1, cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 255), 2)
@@ -136,8 +189,6 @@ for person_directory in os.listdir('E:/Software/Experiments/test_0/'):
     
     
     
-
-
 
 # cv2.imwrite('IMG-20191208-WA0004.jpg', image_copy)
 # plt.imshow(image_copy)
